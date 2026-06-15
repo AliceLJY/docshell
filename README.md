@@ -69,7 +69,7 @@ echo "DOCSHELL_TOKEN=$(openssl rand -hex 16)" >> .env.local
 PORT=3010 bash scripts/start-prod.sh
 ```
 
-Then open `http://<server-ip>:<port>/?token=<your-token>` once; the token is stored in the browser afterward.
+Then open `http://<server-ip>:<port>/#token=<your-token>` once; the token is stored in the browser afterward. (The token is passed in the URL **fragment**, which browsers never send to the server, so it stays out of access logs.)
 
 On macOS, run it via a **launchd LaunchAgent in the GUI session** (`scripts/run-server.sh`) rather than a bare SSH/background process — otherwise the `claude` CLI can't read the login Keychain where its subscription credentials live, and you'll see `Not logged in`.
 

@@ -106,14 +106,17 @@ export default function Home() {
     if (e === 'low' || e === 'high' || e === 'max') setEffort(e);
   }, []);
 
-  // 访问令牌：?token=xxx 链接优先（存下来并从地址栏抹掉），否则用 localStorage 里的
+  // 访问令牌：优先从 URL fragment 读（#token=…）——fragment 不会发给服务器、不进访问日志，比 ?token=
+  // 查询参数安全；兼容旧的 ?token=。读到就存 localStorage 并把 token 从地址栏（hash + query）抹掉。
   useEffect(() => {
+    let t = '';
+    if (window.location.hash.startsWith('#token=')) t = decodeURIComponent(window.location.hash.slice(7));
     const url = new URL(window.location.href);
-    const t = url.searchParams.get('token');
+    if (!t) t = url.searchParams.get('token') || '';
     if (t) {
       localStorage.setItem('docshell-token', t);
       url.searchParams.delete('token');
-      window.history.replaceState({}, '', url.pathname + url.search);
+      window.history.replaceState({}, '', url.pathname + url.search); // 同时丢掉 hash
     }
     tokenRef.current = localStorage.getItem('docshell-token') || '';
   }, []);

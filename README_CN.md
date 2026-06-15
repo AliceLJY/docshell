@@ -69,7 +69,7 @@ echo "DOCSHELL_TOKEN=$(openssl rand -hex 16)" >> .env.local
 PORT=3010 bash scripts/start-prod.sh
 ```
 
-然后用 `http://<server-ip>:<port>/?token=<你的token>` 打开一次；之后 token 会存进浏览器。
+然后用 `http://<server-ip>:<port>/#token=<你的token>` 打开一次；之后 token 会存进浏览器。（token 放在 URL **fragment**（`#` 后面），浏览器不会把它发给服务器，所以不会进访问日志。）
 
 在 macOS 上，请通过**跑在 GUI 会话里的 launchd LaunchAgent**（`scripts/run-server.sh`）启动，而不是裸的 SSH / 后台进程——否则 `claude` CLI 读不到登录会话 Keychain 里的订阅凭证，会报 `Not logged in`。
 
