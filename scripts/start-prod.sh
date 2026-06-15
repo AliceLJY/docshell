@@ -25,4 +25,5 @@ sleep 1
 nohup npx next start --hostname 0.0.0.0 --port "$PORT" > /tmp/docshell.log 2>&1 &
 sleep 2
 echo "[docshell] started PID $! on 0.0.0.0:$PORT (log: /tmp/docshell.log)"
-echo "[docshell] 访问： http://<server-ip>:$PORT/?token=<你的token>"
+# token 用 URL fragment（#token=）而非查询参数（?token=）：fragment 不发给服务器、不进访问日志
+echo "[docshell] 访问： http://<server-ip>:$PORT/#token=<你的token>"

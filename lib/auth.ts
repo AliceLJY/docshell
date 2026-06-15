@@ -24,9 +24,10 @@ export function checkAuth(req: Request): Response | null {
     return null; // 通过
   }
 
-  // 本机 dev：无 token，回退 localhost 同源校验
+  // 本机 dev：无 token，回退 localhost 同源校验。缺 Origin 也拒——浏览器对 POST 一定带 Origin，
+  // 没带的只能是非浏览器/伪造请求，不放行（防 spoofable-field 绕过）。token 模式下本分支不生效。
   const origin = req.headers.get('origin') || '';
-  if (origin && !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+  if (!origin || !/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return new Response(JSON.stringify({ error: 'forbidden origin' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
