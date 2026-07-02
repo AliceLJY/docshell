@@ -4,6 +4,8 @@
 
 [English README](./README.md)
 
+![DocShell — 你的输入和模型的回复都是文档段落，它读的文件、跑的命令以可折叠的页边批注形式出现在右侧。](docs/assets/docshell-ui.png)
+
 ---
 
 ## 为什么做这个

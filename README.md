@@ -4,6 +4,8 @@
 
 [中文说明 / Chinese README](./README_CN.md)
 
+![DocShell — your message and the model's reply are document paragraphs; the files it reads and commands it runs surface as collapsible margin comments in the right rail.](docs/assets/docshell-ui.png)
+
 ---
 
 ## Why
