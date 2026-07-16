@@ -81,9 +81,22 @@ function baseArgs(model: string, effort: string): string[] {
   return args;
 }
 
+/** Keep server auth/bind state out of the Claude process and every tool it spawns. */
+export function buildClaudeEnv(source: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const childEnv: NodeJS.ProcessEnv = {
+    ...source,
+    LANG: 'en_US.UTF-8',
+    HOME: source.HOME || os.homedir(),
+  };
+  for (const key of Object.keys(childEnv)) {
+    if (key.startsWith('DOCSHELL_')) delete childEnv[key];
+  }
+  return childEnv;
+}
+
 function spawnProc(args: string[]): ChildProcess {
   return spawn('claude', args, {
-    env: { ...process.env, LANG: 'en_US.UTF-8', HOME: process.env.HOME || os.homedir() },
+    env: buildClaudeEnv(),
     cwd: process.env.HOME || os.homedir(),
     stdio: ['pipe', 'pipe', 'pipe'],
   });
