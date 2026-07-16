@@ -22,8 +22,7 @@ export interface ImageAttachment {
   name?: string;
 }
 
-export type ModelType = 'sonnet' | 'opus' | 'haiku';
-export type Backend = 'claude' | 'codex';
+export type ModelType = 'opus';
 
 export interface ChatRequest {
   message: string;
@@ -37,11 +36,12 @@ export interface ChatRequest {
 
 /**
  * DocShell 前后端 SSE 事件契约。
- * 事件集：paragraph_delta / comment_tool / revision_diff / footnote_error / session。
+ * 事件集：paragraph_delta / comment_tool / revision_diff / footnote_error / truncated / session。
  *   - paragraph_delta：模型回复的流式文本 → 接成正文段
  *   - comment_tool   ：工具调用 → 页边批注摘要（点开看 detail）
  *   - revision_diff  ：Edit/Write → 正文里的修订记录（删除线 + 新增）
  *   - footnote_error ：报错 → 脚注
+ *   - truncated      ：正文达到上限 → 明确告知后续内容已截断
  *   - session        ：会话 id（多轮 resume）
  *   - done           ：一轮结束
  */
@@ -50,6 +50,7 @@ export type DocEvent =
   | { type: 'comment_tool'; toolId: string; icon: string; who: string; summary: string; detail: string }
   | { type: 'revision_diff'; toolId: string; file: string; before: string; after: string }
   | { type: 'footnote_error'; error: string }
+  | { type: 'truncated'; error: string; limitBytes: number }
   | { type: 'session'; sessionId: string; replaced?: boolean }
   | { type: 'comment_result'; toolId: string; content: string }
   | { type: 'done' };

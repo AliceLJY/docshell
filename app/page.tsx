@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { listDocs, getDoc, saveDoc, type StoredDoc, type StoredPara, type StoredComment } from '@/lib/docs-db';
+import type { DocEvent } from '@/lib/types';
 
 type Para =
   | { id: string; kind: 'input' | 'reply'; text: string }
@@ -35,7 +36,7 @@ export default function Home() {
   // 精细度（effort）：深度=max（默认）/ 标准=high / 快速=low。是速度↔深度的取舍旋钮。
   const [effort, setEffort] = useState<'low' | 'high' | 'max'>('max');
   const ccSession = useRef<string | undefined>(undefined);
-  // 访问令牌（仅网络部署需要）：从 ?token= 链接或 localStorage 取，随请求带 x-docshell-token 头
+  // 访问令牌（仅网络部署需要）：从 #token= 链接或 localStorage 取，随请求带 x-docshell-token 头
   const tokenRef = useRef<string>('');
   // 当前回合的 AbortController：按 Esc 中断（相当于终端 Ctrl+C）
   const abortRef = useRef<AbortController | null>(null);
@@ -106,17 +107,15 @@ export default function Home() {
     if (e === 'low' || e === 'high' || e === 'max') setEffort(e);
   }, []);
 
-  // 访问令牌：优先从 URL fragment 读（#token=…）——fragment 不会发给服务器、不进访问日志，比 ?token=
-  // 查询参数安全；兼容旧的 ?token=。读到就存 localStorage 并把 token 从地址栏（hash + query）抹掉。
+  // 访问令牌只从 URL fragment 读（#token=…）：fragment 不会发给服务器，也不会进入访问日志。
+  // 不兼容 ?token=，因为查询参数在前端有机会清除之前就已经发给了服务器。
   useEffect(() => {
     let t = '';
     if (window.location.hash.startsWith('#token=')) t = decodeURIComponent(window.location.hash.slice(7));
     const url = new URL(window.location.href);
-    if (!t) t = url.searchParams.get('token') || '';
     if (t) {
       localStorage.setItem('docshell-token', t);
-      url.searchParams.delete('token');
-      window.history.replaceState({}, '', url.pathname + url.search); // 同时丢掉 hash
+      window.history.replaceState({}, '', url.pathname + url.search); // 丢掉 hash，保留无敏感信息的 query
     }
     tokenRef.current = localStorage.getItem('docshell-token') || '';
   }, []);
@@ -207,8 +206,8 @@ export default function Home() {
         buf = lines.pop() || '';
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
-          let ev: Record<string, string>;
-          try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+          let ev: DocEvent;
+          try { ev = JSON.parse(line.slice(6)) as DocEvent; } catch { continue; }
           switch (ev.type) {
             case 'paragraph_delta':
               setParas((prev) => prev.map((p) => p.id === rid && p.kind === 'reply' ? { ...p, text: p.text + ev.text } : p));
@@ -224,6 +223,12 @@ export default function Home() {
               break;
             case 'footnote_error':
               setComments((prev) => [...prev, { id: nid(), icon: '⚠', who: '批注 · 出错', summary: ev.error, detail: ev.error, open: false, err: true }]);
+              break;
+            case 'truncated':
+              setComments((prev) => [...prev, {
+                id: nid(), icon: '⚠', who: '批注 · 输出已截断', summary: ev.error,
+                detail: `${ev.error}\n限制：${Math.round(ev.limitBytes / 1024 / 1024)} MB`, open: false, err: true,
+              }]);
               break;
             case 'comment_result':
               setComments((prev) => prev.map((c) => c.id === ev.toolId
@@ -305,7 +310,7 @@ export default function Home() {
                 }}
               >{title}</span>
               <span style={{ color: '#5f6368', cursor: 'pointer' }}>☆</span>
-              <span className="doc-status">已保存到云端</span>
+              <span className="doc-status">已保存在本机浏览器</span>
             </div>
             <div className="doc-menu">
               <span onClick={() => setFileMenuOpen((v) => !v)} style={{ fontWeight: fileMenuOpen ? 600 : 400 }}>文件</span>
@@ -401,7 +406,7 @@ export default function Home() {
           <div className="settings" onClick={(e) => e.stopPropagation()}>
             <h3>文档设置</h3>
             <label>编辑助手</label>
-            <select><option>Claude（订阅）</option><option>Codex</option></select>
+            <input value="Claude Code（订阅）" readOnly />
             <label>精细度</label>
             <select
               value={effort}

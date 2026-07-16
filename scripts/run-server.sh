@@ -7,8 +7,18 @@
 # 正常。RunAtLoad + KeepAlive 顺带给开机 / 崩溃持久化。
 #
 # 只启动已 build 的生产服务，不 build（build 由 start-prod.sh 或部署流程单独做）。
-cd "$(dirname "$0")/.." || exit 1
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+cd "$PROJECT_ROOT"
+
+source "$SCRIPT_DIR/launch-guard.sh"
+
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"
 export PORT="${PORT:-3010}"
-# exec → launchd 直接跟踪 node 进程（DOCSHELL_TOKEN 由 Next.js 从 .env.local 自动载入）
-exec node node_modules/.bin/next start --hostname 0.0.0.0 --port "$PORT"
+export DOCSHELL_HOST="${DOCSHELL_HOST:-127.0.0.1}"
+docshell_guard_launch "$PROJECT_ROOT" "$DOCSHELL_HOST" "$PORT" production
+
+# exec → launchd directly tracks the guarded Next process.
+exec node node_modules/.bin/next start --hostname "$DOCSHELL_HOST" --port "$PORT"
