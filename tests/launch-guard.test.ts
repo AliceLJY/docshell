@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rmdir, stat, unlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rmdir, stat, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,6 +9,7 @@ import test from 'node:test';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const guardPath = join(repoRoot, 'scripts', 'check-bind.mjs');
 const tokenInitPath = join(repoRoot, 'scripts', 'token-init.mjs');
+const privateLogPath = join(repoRoot, 'scripts', 'private-log.sh');
 
 function runGuard(envRoot: string, host: string, token?: string, port = '3010') {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: 'production' };
@@ -103,10 +104,64 @@ test('both production launchers source and invoke the same guard', async () => {
   }
 });
 
+test('background production logs use unique files in a private directory', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'docshell-log-test-'));
+  const stateRoot = join(root, 'state');
+  const run = () => spawnSync('bash', ['-c', 'source "$1"; docshell_create_private_log', 'bash', privateLogPath], {
+    cwd: repoRoot,
+    env: { ...process.env, HOME: root, XDG_STATE_HOME: stateRoot },
+    encoding: 'utf8',
+  });
+  let firstPath = '';
+  let secondPath = '';
+  try {
+    const first = run();
+    const second = run();
+    assert.equal(first.status, 0, first.stderr);
+    assert.equal(second.status, 0, second.stderr);
+    firstPath = first.stdout.trim();
+    secondPath = second.stdout.trim();
+    assert.notEqual(firstPath, secondPath);
+    assert.equal((await stat(dirname(firstPath))).mode & 0o777, 0o700);
+    assert.equal((await stat(firstPath)).mode & 0o777, 0o600);
+    assert.equal((await stat(secondPath)).mode & 0o777, 0o600);
+  } finally {
+    if (firstPath) await unlink(firstPath);
+    if (secondPath) await unlink(secondPath);
+    await rmdir(join(stateRoot, 'docshell', 'logs'));
+    await rmdir(join(stateRoot, 'docshell'));
+    await rmdir(stateRoot);
+    await rmdir(root);
+  }
+});
+
+test('private log helper rejects a symlink log directory', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'docshell-log-link-test-'));
+  const target = join(root, 'target');
+  const link = join(root, 'logs');
+  await mkdir(target, { mode: 0o700 });
+  await symlink(target, link);
+  try {
+    const result = spawnSync('bash', ['-c', 'source "$1"; docshell_create_private_log', 'bash', privateLogPath], {
+      cwd: repoRoot,
+      env: { ...process.env, HOME: root, DOCSHELL_LOG_DIR: link },
+      encoding: 'utf8',
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /refusing symlink log directory/);
+  } finally {
+    await unlink(link);
+    await rmdir(target);
+    await rmdir(root);
+  }
+});
+
 test('restart scripts never kill listeners without ownership checks', async () => {
   const startProd = await readFile(join(repoRoot, 'scripts', 'start-prod.sh'), 'utf8');
   assert.match(startProd, /lsof -a -p "\$listener_pid" -d cwd/);
   assert.match(startProd, /refusing to stop unrelated listener/);
+  assert.doesNotMatch(startProd, /\/tmp\/docshell\.log/);
+  assert.match(startProd, /docshell_create_private_log/);
 
   const rebuild = await readFile(join(repoRoot, 'scripts', 'rebuild.sh'), 'utf8');
   assert.match(rebuild, /launchctl kickstart -k/);
@@ -114,7 +169,7 @@ test('restart scripts never kill listeners without ownership checks', async () =
 });
 
 test('all supported launch scripts pass shell syntax checks and executable entrypoints are executable', async () => {
-  const scripts = ['start-prod.sh', 'run-server.sh', 'run-dev.sh', 'rebuild.sh', 'launch-guard.sh'];
+  const scripts = ['start-prod.sh', 'run-server.sh', 'run-dev.sh', 'rebuild.sh', 'launch-guard.sh', 'private-log.sh'];
   const syntax = spawnSync('bash', ['-n', ...scripts.map((name) => join(repoRoot, 'scripts', name))], {
     cwd: repoRoot,
     encoding: 'utf8',

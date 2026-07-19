@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$PROJECT_ROOT"
 
 source "$SCRIPT_DIR/launch-guard.sh"
+source "$SCRIPT_DIR/private-log.sh"
 
 # 后台进程的 PATH 可能不含 claude → cc-process 的 spawn('claude') 会失败。补进常见安装路径。
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -18,6 +19,7 @@ docshell_guard_launch "$PROJECT_ROOT" "$DOCSHELL_HOST" "$PORT" production
 
 echo "[docshell] building..."
 npm run build
+LOG_FILE="$(docshell_create_private_log)"
 
 echo "[docshell] (re)starting on $DOCSHELL_HOST:$PORT ..."
 LISTENER_PIDS="$(lsof -tiTCP:"$PORT" -sTCP:LISTEN 2>/dev/null || true)"
@@ -37,14 +39,14 @@ if [ -n "$LISTENER_PIDS" ]; then
   done <<< "$LISTENER_PIDS"
 fi
 sleep 1
-nohup node node_modules/.bin/next start --hostname "$DOCSHELL_HOST" --port "$PORT" > /tmp/docshell.log 2>&1 &
+nohup node node_modules/.bin/next start --hostname "$DOCSHELL_HOST" --port "$PORT" > "$LOG_FILE" 2>&1 &
 SERVER_PID=$!
 sleep 2
 if ! kill -0 "$SERVER_PID" 2>/dev/null; then
-  echo "[docshell] server exited during startup; see /tmp/docshell.log" >&2
+  echo "[docshell] server exited during startup; see $LOG_FILE" >&2
   exit 1
 fi
-echo "[docshell] started PID $SERVER_PID on $DOCSHELL_HOST:$PORT (log: /tmp/docshell.log)"
+echo "[docshell] started PID $SERVER_PID on $DOCSHELL_HOST:$PORT (log: $LOG_FILE)"
 if [ "$DOCSHELL_HOST" = "127.0.0.1" ]; then
   echo "[docshell] open: http://127.0.0.1:$PORT/"
 elif [ "$DOCSHELL_HOST" = "::1" ]; then
