@@ -83,6 +83,8 @@ DOCSHELL_HOST=0.0.0.0 PORT=3010 bash scripts/start-prod.sh
 | `DOCSHELL_HOST` | `127.0.0.1` | 绑定地址。无 token 时只接受字面量 `127.0.0.1` 或 `::1`。 |
 | `PORT` | `3010`（生产） | 服务端口。 |
 | `DOCSHELL_NO_REMOTE_CONTROL` | _(未设)_ | 设为 `1` 可关闭对 spawn 出的会话开启 Claude Remote Control。 |
+| `DOCSHELL_MAX_PROCESSES` | `8` | 常驻 Claude 进程上限。新回合只回收最久未使用的空闲进程，活跃流不会被中断；有效范围 1–64。 |
+| `DOCSHELL_LOG_DIR` | `$XDG_STATE_HOME/docshell/logs` 或 `~/.local/state/docshell/logs` | `start-prod.sh` 每次启动创建权限为 `600` 的唯一日志文件，目录权限为 `700`。 |
 
 当前后端是 Claude Code，模型固定为 `opus`。精细度可在文档设置里选择（标准 / 深度 / 快速 → `high` / `max` / `low`），默认是 `max`。
 

@@ -83,6 +83,8 @@ On macOS, run it via a **launchd LaunchAgent in the GUI session** (`scripts/run-
 | `DOCSHELL_HOST` | `127.0.0.1` | Bind address. Without a token, only literal `127.0.0.1` or `::1` is accepted. |
 | `PORT` | `3010` (prod) | Server port. |
 | `DOCSHELL_NO_REMOTE_CONTROL` | _(unset)_ | Set to `1` to disable Claude's Remote Control on spawned sessions. |
+| `DOCSHELL_MAX_PROCESSES` | `8` | Maximum resident Claude processes. New turns evict the least-recently-used idle process; active streams are never evicted. Valid range: 1–64. |
+| `DOCSHELL_LOG_DIR` | `$XDG_STATE_HOME/docshell/logs` or `~/.local/state/docshell/logs` | Private directory for unique mode-`600` logs created by `start-prod.sh`. |
 
 The backend is currently Claude Code and the model is currently fixed to `opus`. Effort is chosen in the document's settings panel (Standard / Deep / Fast → `high` / `max` / `low`); the default is `max`.
 

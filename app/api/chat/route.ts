@@ -79,12 +79,21 @@ export async function POST(req: Request) {
 
       // assistant partial 快照会重复同一 toolId → 去重
       const seenToolIds = new Set<string>();
+      let sentSessionId = '';
+      const sendSession = (sessionId: string | undefined) => {
+        if (!sessionId || sessionId === sentSessionId) return;
+        sentSessionId = sessionId;
+        send({ type: 'session', sessionId });
+      };
       // 剥掉模型回复里的 HTML 注释（某些 MCP server 会在回复末尾追加 `<!-- ... -->` 状态注释），避免漏进文档正文
       const stripper = createCommentStripper();
       const emitText = createLimitedTextEmitter(send);
 
       // 把常驻进程吐出的解析 chunk 塑形成 DocShell 文档事件
       const onChunk = (parsed: ParsedChunk) => {
+        // 新会话的 id 通常在首个 system/message_start 事件里就出现。立即发给浏览器，
+        // 这样首轮生成稍后被 Esc 中断时，已建立的会话仍可持久化并在下一轮恢复。
+        sendSession(parsed.sessionId);
         switch (parsed.kind) {
           case 'text_delta':
             emitText(stripper.feed(parsed.text || ''));
@@ -107,7 +116,7 @@ export async function POST(req: Request) {
             send({ type: 'footnote_error', error: sanitizeError(parsed.error || '') });
             break;
 
-          // session_id / result：会话 id 由 runTurn 返回后统一发；result 仅标记回合结束
+          // session_id / result：sessionId 已在 switch 前处理；result 仅标记回合结束
         }
       };
 
@@ -121,7 +130,7 @@ export async function POST(req: Request) {
         signal: req.signal,
       })
         .then(({ sessionId }) => {
-          if (sessionId) send({ type: 'session', sessionId });
+          sendSession(sessionId);
         })
         .catch((err) => {
           console.error('[DocShell] runTurn error:', err);
