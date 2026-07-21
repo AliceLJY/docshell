@@ -226,8 +226,6 @@ function consumeTurn(
     const done = () => { if (!settled) { settled = true; cleanup(); resolve(); } };
     const fail = (err: Error) => { if (!settled) { settled = true; cleanup(); reject(err); } };
 
-    signal?.addEventListener('abort', onAbort);
-
     dp.onClose = () => {
       if (phase === 'synthetic' && !realEmitted && !signal?.aborted) fail(new ResumeFailedError('resume failed'));
       else fail(new Error(dp.stderr.trim() || 'claude 进程意外退出'));
@@ -264,6 +262,13 @@ function consumeTurn(
       timer = setTimeout(() => { if (phase === 'synthetic') fail(new ResumeFailedError('synthetic-turn-timeout')); }, SYNTHETIC_TURN_TIMEOUT);
       timer.unref?.();
     }
+
+    if (signal?.aborted) {
+      onAbort();
+      fail(new Error('aborted'));
+      return;
+    }
+    signal?.addEventListener('abort', onAbort);
 
     try { dp.proc.stdin?.write(userMsg(prompt)); }
     catch (e) { fail(e instanceof Error ? e : new Error(String(e))); }
