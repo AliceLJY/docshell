@@ -4,7 +4,9 @@
 
 [中文说明 / Chinese README](./README_CN.md)
 
-> **Status:** stable · low-frequency maintenance · last verified 2026-10.
+> **Status:** personal experiment · stable · low-frequency maintenance · last verified 2026-10.
+>
+> **The interface is in Chinese** (Simplified). There is no English localization yet; the screenshot below shows what you will see.
 
 ![DocShell — your message and the model's reply are document paragraphs; the files it reads and commands it runs surface as collapsible margin comments in the right rail.](docs/assets/docshell-ui.png)
 
@@ -55,9 +57,11 @@ Browser (document UI)              Server (Next.js, your machine)
 Prerequisites:
 
 - Node.js 20+
-- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude` on your `PATH`)
+- [Claude Code CLI](https://code.claude.com/docs/en/overview) installed and logged in (`claude` on your `PATH`)
 
 ```bash
+git clone https://github.com/AliceLJY/docshell.git
+cd docshell
 npm install
 npm run dev   # http://127.0.0.1:3000
 ```
@@ -96,6 +100,8 @@ DocShell runs the agent with `--permission-mode bypassPermissions` (tools auto-e
 
 - The guard only blocks a small set of blatant, irreversible commands; it can be bypassed by obfuscation (base64-pipe-to-shell, child interpreters, etc.).
 - The working directory is the user's `HOME` by default.
+- Claude's Remote Control is **on** for spawned sessions by default, so they can also be picked up from the Claude app or claude.ai/code under your account. Set `DOCSHELL_NO_REMOTE_CONTROL=1` to turn it off.
+- The model is fixed to `opus` and the default effort is `max`. That draws on your Claude subscription quickly; switch the document to Standard or Fast in the settings panel for everyday use.
 - Server-only `DOCSHELL_*` authentication and bind variables are removed from the Claude child process environment, but the agent still runs as the same OS user and can access that user's permitted files. Use a separate account or stronger isolation for untrusted content.
 - Uploaded temporary files are kept in a user-owned mode-`700` directory as mode-`600` files and are removed after each turn; a hard crash can still leave temporary files behind.
 

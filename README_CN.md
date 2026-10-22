@@ -4,7 +4,9 @@
 
 [English README](./README.md)
 
-> **状态：** 稳定 · 低频维护 · 2026-10 最后核验。
+> **状态：** 个人实验 · 稳定 · 低频维护 · 2026-10 最后核验。
+>
+> **界面是中文的**（简体），暂无英文界面；下面的截图就是你会看到的样子。
 
 ![DocShell — 你的输入和模型的回复都是文档段落，它读的文件、跑的命令以可折叠的页边批注形式出现在右侧。](docs/assets/docshell-ui.png)
 
@@ -55,9 +57,11 @@
 前置：
 
 - Node.js 20+
-- 已安装并登录的 [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code)（`claude` 在你的 `PATH` 里）
+- 已安装并登录的 [Claude Code CLI](https://code.claude.com/docs/en/overview)（`claude` 在你的 `PATH` 里）
 
 ```bash
+git clone https://github.com/AliceLJY/docshell.git
+cd docshell
 npm install
 npm run dev   # http://127.0.0.1:3000
 ```
@@ -96,6 +100,8 @@ DocShell 以 `--permission-mode bypassPermissions`（工具自动执行）+ 危�
 
 - 护栏只拦一小撮直白、不可逆的命令；可被混淆写法绕过（base64 管道进 shell、子解释器等）。
 - 工作目录默认是用户的 `HOME`。
+- 新起的会话默认**开启** Claude 的 Remote Control，也就是说在你账号下的 Claude app 或 claude.ai/code 里也能接管它们。设 `DOCSHELL_NO_REMOTE_CONTROL=1` 可以关掉。
+- 模型固定为 `opus`，默认推理强度是 `max`，很耗订阅额度；日常用可以在文档的设置面板里切到「标准」或「快速」。
 - 服务端专用的 `DOCSHELL_*` 认证与绑定变量会从 Claude 子进程环境中移除；但 agent 仍以同一个系统用户运行，仍能访问这个用户本来有权读取的文件。处理不可信内容时请使用独立账户或更强隔离。
 - 上传临时文件放在当前用户拥有、权限为 `700` 的目录中，文件权限为 `600`，每轮结束后删除；若进程硬崩溃，仍可能留下临时文件。
 
